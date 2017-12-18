@@ -16,9 +16,9 @@ namespace SiteDownloader
         private readonly ISet<string> _visitedUrls = new HashSet<string>();
 
         public event EventHandler<UrlFoundedEventArgs> UrlFounded;
-        public event EventHandler<FileLoadedEventArgs> FileLoaded;
         public event EventHandler<HtmlDocumentLoadedEventArgs> HtmlLoaded;
-
+        public event EventHandler<FileFoundedEventArgs> FileFounded;
+        public event EventHandler<FileLoadedEventArgs> FileLoaded;
 
         public int MaxDeepLevel { get; set; }
 
@@ -50,9 +50,19 @@ namespace SiteDownloader
             }
             _visitedUrls.Add(url);
 
-            OnUrlFounded(new UrlFoundedEventArgs {Url = url, IsAcceptable = true});
-            var response = httpClient.GetAsync(url).Result;
+            var urlFoundedEventArgs = new UrlFoundedEventArgs
+            {
+                Url = url,
+                IsAcceptable = true
+            };
+            OnUrlFounded(urlFoundedEventArgs);
+            if (!urlFoundedEventArgs.IsAcceptable)
+            {
+                return;
+            }
 
+            var response = httpClient.GetAsync(url).Result;
+            
             if (response.IsSuccessStatusCode)
             {
                 if (response.Content.Headers.ContentType.MediaType == "text/html")
@@ -74,6 +84,19 @@ namespace SiteDownloader
                 }
                 else
                 {
+                    var fileFoundedEventArgs = new FileFoundedEventArgs
+                    {
+                        Uri = response.RequestMessage.RequestUri,
+                        IsAcceptable = true
+                    };
+
+                    OnFileFounded(fileFoundedEventArgs);
+
+                    if (!fileFoundedEventArgs.IsAcceptable)
+                    {
+                        return;
+                    }
+
                     OnFileLoaded(new FileLoadedEventArgs
                     {
                         Uri = response.RequestMessage.RequestUri,
@@ -96,6 +119,11 @@ namespace SiteDownloader
         private void OnHtmlLoaded(HtmlDocumentLoadedEventArgs args)
         {
             HtmlLoaded?.Invoke(this, args);
+        }
+
+        private void OnFileFounded(FileFoundedEventArgs args)
+        {
+            FileFounded?.Invoke(this, args);
         }
 
         private void OnFileLoaded(FileLoadedEventArgs args)

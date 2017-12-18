@@ -46,6 +46,7 @@
     <Compile Include="BetweenDomainTransition.cs" />
     <Compile Include="ContentSaver.cs" />
     <Compile Include="Downloader.cs" />
+    <Compile Include="Events\FileFoundedEventArgs.cs" />
     <Compile Include="Events\FileLoadedEventArgs.cs" />
     <Compile Include="Events\HtmlDocumentLoadedEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Channels;
 using System.Text;
 using System.Threading.Tasks;
+using CUI.Constraints;
 using SiteDownloader;
 
 namespace CUI
@@ -12,12 +14,47 @@ namespace CUI
     {
         static void Main(string[] args)
         {
-            Downloader downloader = new Downloader(2);
+            var options = new Options();
+            if (!CommandLine.Parser.Default.ParseArguments(args, options))
+            {
+                return;
+            }
+
+            Console.WriteLine(options.Verbose);
+
+            Downloader downloader = new Downloader(options.DeepLevel);
             ContentSaver contentSaver = new ContentSaver();
-            DirectoryInfo rootDirectory = new DirectoryInfo(@"D:\websites\stack");
+            DirectoryInfo rootDirectory = new DirectoryInfo(options.OutputDirectoryPath);
             rootDirectory.Create();
 
-            downloader.UrlFounded += (sender, eventArgs) => { Console.WriteLine(eventArgs.Url); };
+            FileTypesConstraint fileTypesConstraint = null;
+            if (options.AvailableExtensions != null)
+            {
+                fileTypesConstraint = new FileTypesConstraint(options.AvailableExtensions.Split(',').Select(e => "." + e));
+            }
+            else
+            {
+                Console.WriteLine(options.GetUsage());
+                return;
+            }
+
+            CrossDomainTransitionConstraint crossDomainTransitionConstraint = new CrossDomainTransitionConstraint(options.CrossDomainTransition, new Uri(options.Url));
+
+            downloader.UrlFounded += (sender, eventArgs) =>
+            {
+                if (options.Verbose)
+                {
+                    Console.WriteLine(new Uri(new Uri(options.Url), eventArgs.Url));
+                }
+                eventArgs.IsAcceptable = crossDomainTransitionConstraint.IsAcceptable(new Uri(new Uri(options.Url), eventArgs.Url));
+            };
+
+            downloader.FileFounded += (sender, eventArgs) =>
+            {
+                Console.WriteLine(eventArgs.Uri);
+                eventArgs.IsAcceptable = fileTypesConstraint.IsAcceptable(eventArgs.Uri);
+            };
+
             downloader.FileLoaded += (sender, eventArgs) =>
             {
                 Console.WriteLine($"File: {eventArgs.Uri}");
@@ -26,13 +63,11 @@ namespace CUI
 
             downloader.HtmlLoaded += (sender, eventArgs) =>
             {
-                Console.WriteLine($"Html: {eventArgs.Uri}");
+                //Console.WriteLine($"Html: {eventArgs.Uri}");
                 contentSaver.SaveHtmlDocument(rootDirectory, eventArgs.Uri, eventArgs.Document);
             };
             
-            Console.WriteLine("Started");
-            downloader.LoadFromUrl("https://ru.stackoverflow.com/questions/420354/%D0%9A%D0%B0%D0%BA-%D1%80%D0%B0%D1%81%D0%BF%D0%B0%D1%80%D1%81%D0%B8%D1%82%D1%8C-html-%D0%B2-net/450586");
-            Console.WriteLine("Finished");
+            downloader.LoadFromUrl(options.Url);
         }
     }
 }
