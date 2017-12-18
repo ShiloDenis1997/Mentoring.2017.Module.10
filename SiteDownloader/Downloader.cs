@@ -13,7 +13,7 @@ namespace SiteDownloader
 {
     public class Downloader
     {
-        private readonly ISet<string> _visitedUrls = new HashSet<string>();
+        private readonly ISet<Uri> _visitedUrls = new HashSet<Uri>();
 
         public event EventHandler<UrlFoundedEventArgs> UrlFounded;
         public event EventHandler<HtmlDocumentLoadedEventArgs> HtmlLoaded;
@@ -38,21 +38,21 @@ namespace SiteDownloader
             using (var httpClient = new HttpClient())
             {
                 httpClient.BaseAddress = new Uri(url);
-                ScanUrl(httpClient, url, 0);
+                ScanUrl(httpClient, httpClient.BaseAddress, 0);
             }
         }
 
-        private void ScanUrl(HttpClient httpClient, string url, int level)
+        private void ScanUrl(HttpClient httpClient, Uri uri, int level)
         {
-            if (level > MaxDeepLevel || _visitedUrls.Contains(url))
+            if (level > MaxDeepLevel || _visitedUrls.Contains(uri))
             {
                 return;
             }
-            _visitedUrls.Add(url);
+            _visitedUrls.Add(uri);
 
             var urlFoundedEventArgs = new UrlFoundedEventArgs
             {
-                Url = url,
+                Uri = uri,
                 IsAcceptable = true
             };
             OnUrlFounded(urlFoundedEventArgs);
@@ -60,13 +60,14 @@ namespace SiteDownloader
             {
                 return;
             }
-
-            var response = httpClient.GetAsync(url).Result;
             
-            if (response.IsSuccessStatusCode)
+            var head = httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri)).Result;
+            
+            if (head.IsSuccessStatusCode)
             {
-                if (response.Content.Headers.ContentType.MediaType == "text/html")
+                if (head.Content.Headers.ContentType.MediaType == "text/html")
                 {
+                    var response = httpClient.GetAsync(uri).Result;
                     var document = new HtmlDocument();
                     document.Load(response.Content.ReadAsStreamAsync().Result,
                         Encoding.UTF8);
@@ -79,14 +80,14 @@ namespace SiteDownloader
                         .SelectMany(d => d.Attributes.Where(CheckIfAttributeHaveLink));
                     foreach (var attributesWithLink in attributesWithLinks)
                     {
-                        ScanUrl(httpClient, attributesWithLink.Value, level + 1);
+                        ScanUrl(httpClient, new Uri(httpClient.BaseAddress, attributesWithLink.Value), level + 1);
                     }
                 }
                 else
                 {
                     var fileFoundedEventArgs = new FileFoundedEventArgs
                     {
-                        Uri = response.RequestMessage.RequestUri,
+                        Uri = uri,
                         IsAcceptable = true
                     };
 
@@ -97,9 +98,10 @@ namespace SiteDownloader
                         return;
                     }
 
+                    var response = httpClient.GetAsync(uri).Result;
                     OnFileLoaded(new FileLoadedEventArgs
                     {
-                        Uri = response.RequestMessage.RequestUri,
+                        Uri = uri,
                         FileContent = response.Content.ReadAsStreamAsync().Result
                     });
                 }

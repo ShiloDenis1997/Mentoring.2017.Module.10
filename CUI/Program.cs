@@ -44,9 +44,9 @@ namespace CUI
             {
                 if (options.Verbose)
                 {
-                    Console.WriteLine(new Uri(new Uri(options.Url), eventArgs.Url));
+                    Console.WriteLine(eventArgs.Uri);
                 }
-                eventArgs.IsAcceptable = crossDomainTransitionConstraint.IsAcceptable(new Uri(new Uri(options.Url), eventArgs.Url));
+                eventArgs.IsAcceptable = crossDomainTransitionConstraint.IsAcceptable(eventArgs.Uri);
             };
 
             downloader.FileFounded += (sender, eventArgs) =>
