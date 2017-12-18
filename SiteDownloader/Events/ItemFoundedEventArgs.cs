@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SiteDownloader.Events
 {
-    public class FileFoundedEventArgs : EventArgs
+    public class ItemFoundedEventArgs : EventArgs
     {
         public Uri Uri { get; set; }
         public bool IsAcceptable { get; set; }

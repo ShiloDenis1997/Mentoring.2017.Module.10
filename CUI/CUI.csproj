@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constraints\FileTypesConstraint.cs" />
+    <Compile Include="ContentSaver.cs" />
     <Compile Include="CrossDomainTransition.cs" />
     <Compile Include="Constraints\CrossDomainTransitionConstraint.cs" />
     <Compile Include="ConstraintType.cs" />

@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Channels;
-using System.Text;
-using System.Threading.Tasks;
 using CUI.Constraints;
 using SiteDownloader;
 
@@ -22,7 +18,7 @@ namespace CUI
 
             Console.WriteLine(options.Verbose);
 
-            Downloader downloader = new Downloader(options.DeepLevel);
+            ISiteDownloader downloader = new Downloader(options.DeepLevel);
             ContentSaver contentSaver = new ContentSaver();
             DirectoryInfo rootDirectory = new DirectoryInfo(options.OutputDirectoryPath);
             rootDirectory.Create();
@@ -63,8 +59,7 @@ namespace CUI
 
             downloader.HtmlLoaded += (sender, eventArgs) =>
             {
-                //Console.WriteLine($"Html: {eventArgs.Uri}");
-                contentSaver.SaveHtmlDocument(rootDirectory, eventArgs.Uri, eventArgs.Document);
+                contentSaver.SaveHtmlDocument(rootDirectory, eventArgs.Uri, eventArgs.FileName, eventArgs.Document);
             };
             
             downloader.LoadFromUrl(options.Url);

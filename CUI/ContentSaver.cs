@@ -1,24 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using HtmlAgilityPack;
 
-namespace SiteDownloader
+namespace CUI
 {
     public class ContentSaver
     {
-        public void SaveHtmlDocument(DirectoryInfo rootDirectory, Uri uri, HtmlDocument document)
+        public void SaveHtmlDocument(DirectoryInfo rootDirectory, Uri uri, string name, Stream documentStream)
         {
             string directoryPath = CombineLocations(rootDirectory, uri);
             Directory.CreateDirectory(directoryPath);
-            string filename = document.DocumentNode.Descendants("title").FirstOrDefault()?.InnerText + ".html";
-            filename = RemoveInvalidSymbols(filename);
-            string fileFullPath = Path.Combine(directoryPath, filename);
+            name = RemoveInvalidSymbols(name);
+            string fileFullPath = Path.Combine(directoryPath, name);
+
             var createdFileStream = File.Create(fileFullPath);
-            document.Save(createdFileStream);
+            documentStream.CopyTo(createdFileStream);
+            documentStream.Close();
             createdFileStream.Close();
         }
 
@@ -31,8 +29,10 @@ namespace SiteDownloader
             {
                 fileFullPath = Path.Combine(fileFullPath, Guid.NewGuid().ToString());
             }
+
             var createdFileStream = File.Create(fileFullPath);
             fileStream.CopyTo(createdFileStream);
+            fileStream.Close();
             createdFileStream.Close();
         }
 
