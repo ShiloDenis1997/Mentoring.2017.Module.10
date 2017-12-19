@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using SiteDownloader.Events;
 
 namespace SiteDownloader
@@ -12,6 +13,6 @@ namespace SiteDownloader
         event EventHandler<HtmlDocumentLoadedEventArgs> HtmlLoaded;
         event EventHandler<ItemFoundedEventArgs> UrlFounded;
 
-        void LoadFromUrl(string url);
+        Task LoadFromUrl(string url);
     }
 }

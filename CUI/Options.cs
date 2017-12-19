@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using CommandLine;
 using CommandLine.Text;
+using CUI.Enums;
 
 namespace CUI
 {
-    class Options
+    public class Options
     {
         [Option('t', "transitionPermission", DefaultValue = 1, HelpText = "Set type of cross domain transitions (1 - All, 2 - Current domain, 3 - Descendant urls only.")]
         public CrossDomainTransition CrossDomainTransition { get; set; }

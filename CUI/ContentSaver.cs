@@ -1,38 +1,48 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using HtmlAgilityPack;
+using CUI.Interfaces;
 
 namespace CUI
 {
-    public class ContentSaver
+    public class ContentSaver : IContentSaver
     {
-        public void SaveHtmlDocument(DirectoryInfo rootDirectory, Uri uri, string name, Stream documentStream)
+        private readonly DirectoryInfo _rootDirectory;
+
+        public ContentSaver(DirectoryInfo rootDirectory)
         {
-            string directoryPath = CombineLocations(rootDirectory, uri);
+            _rootDirectory = rootDirectory;
+        }
+
+        public void SaveHtmlDocument(Uri uri, string name, Stream documentStream)
+        {
+            string directoryPath = CombineLocations(_rootDirectory, uri);
             Directory.CreateDirectory(directoryPath);
             name = RemoveInvalidSymbols(name);
             string fileFullPath = Path.Combine(directoryPath, name);
 
-            var createdFileStream = File.Create(fileFullPath);
-            documentStream.CopyTo(createdFileStream);
+            SaveToFile(documentStream, fileFullPath);
             documentStream.Close();
-            createdFileStream.Close();
         }
 
-        public void SaveFile(DirectoryInfo rootDirectory, Uri uri, Stream fileStream)
+        public void SaveFile(Uri uri, Stream fileStream)
         {
-            string fileFullPath = CombineLocations(rootDirectory, uri);
+            string fileFullPath = CombineLocations(_rootDirectory, uri);
             var directoryPath = Path.GetDirectoryName(fileFullPath);
             Directory.CreateDirectory(directoryPath);
-            if (Directory.Exists(fileFullPath))
+            if (Directory.Exists(fileFullPath)) // if file name cannot be obtained from uri
             {
                 fileFullPath = Path.Combine(fileFullPath, Guid.NewGuid().ToString());
             }
 
-            var createdFileStream = File.Create(fileFullPath);
-            fileStream.CopyTo(createdFileStream);
+            SaveToFile(fileStream, fileFullPath);
             fileStream.Close();
+        }
+
+        private void SaveToFile(Stream stream, string fileFullPath)
+        {
+            var createdFileStream = File.Create(fileFullPath);
+            stream.CopyTo(createdFileStream);
             createdFileStream.Close();
         }
 

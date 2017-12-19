@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
@@ -33,25 +32,25 @@ namespace SiteDownloader
             MaxDeepLevel = maxDeepLevel;
         }
 
-        public void LoadFromUrl(string url)
+        public async Task LoadFromUrl(string url)
         {
             _visitedUrls.Clear();
             using (var httpClient = new HttpClient())
             {
                 httpClient.BaseAddress = new Uri(url);
-                ScanUrl(httpClient, httpClient.BaseAddress, 0);
+                await ScanUrl(httpClient, httpClient.BaseAddress, 0);
             }
         }
 
-        private void ScanUrl(HttpClient httpClient, Uri uri, int level)
+        private async Task ScanUrl(HttpClient httpClient, Uri uri, int level)
         {
-            if (level > MaxDeepLevel || _visitedUrls.Contains(uri))
+            if (level > MaxDeepLevel || _visitedUrls.Contains(uri) || !IsValidScheme(uri.Scheme))
             {
                 return;
             }
             _visitedUrls.Add(uri);
-
-            var head = httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri)).Result;
+            Console.WriteLine(uri);
+            HttpResponseMessage head = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri));
 
             if (!head.IsSuccessStatusCode)
             {
@@ -60,15 +59,27 @@ namespace SiteDownloader
 
             if (head.Content.Headers.ContentType?.MediaType == HtmlDocumentMediaType)
             {
-                ProcessHtmlDocument(httpClient, uri, level);
+                await ProcessHtmlDocument(httpClient, uri, level);
             }
             else
             {
-                ProcessFile(httpClient, uri);
+                await ProcessFile(httpClient, uri);
             }
         }
 
-        private void ProcessFile(HttpClient httpClient, Uri uri)
+        private bool IsValidScheme(string scheme)
+        {
+            switch (scheme)
+            {
+                case "http":
+                case "https":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private async Task ProcessFile(HttpClient httpClient, Uri uri)
         {
             var fileFoundedEventArgs = OnItemFounded(FileFounded, uri);
             if (!fileFoundedEventArgs.IsAcceptable)
@@ -80,11 +91,11 @@ namespace SiteDownloader
             OnFileLoaded(new FileLoadedEventArgs
             {
                 Uri = uri,
-                FileContent = response.Content.ReadAsStreamAsync().Result
+                FileContent = await response.Content.ReadAsStreamAsync()
             });
         }
 
-        private void ProcessHtmlDocument(HttpClient httpClient, Uri uri, int level)
+        private async Task ProcessHtmlDocument(HttpClient httpClient, Uri uri, int level)
         {
             var urlFoundedEventArgs = OnItemFounded(UrlFounded, uri);
             if (!urlFoundedEventArgs.IsAcceptable)
@@ -92,9 +103,9 @@ namespace SiteDownloader
                 return;
             }
 
-            var response = httpClient.GetAsync(uri).Result;
+            var response = await httpClient.GetAsync(uri);
             var document = new HtmlDocument();
-            document.Load(response.Content.ReadAsStreamAsync().Result, Encoding.UTF8);
+            document.Load(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
             OnHtmlLoaded(new HtmlDocumentLoadedEventArgs
             {
                 Uri = uri,
@@ -106,7 +117,7 @@ namespace SiteDownloader
                 .SelectMany(d => d.Attributes.Where(IsAttributeWithLink));
             foreach (var attributesWithLink in attributesWithLinks)
             {
-                ScanUrl(httpClient, new Uri(httpClient.BaseAddress, attributesWithLink.Value), level + 1);
+                await ScanUrl(httpClient, new Uri(httpClient.BaseAddress, attributesWithLink.Value), level + 1);
             }
         }
 

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CUI.Interfaces;
+using System;
+using CUI.Enums;
 
 namespace CUI.Constraints
 {
@@ -26,7 +24,7 @@ namespace CUI.Constraints
             }
         }
 
-        public ConstraintType ConstraintType => ConstraintType.UrlConstraint;
+        public ConstraintType ConstraintType => ConstraintType.UrlConstraint | ConstraintType.FileConstraint;
 
         public bool IsAcceptable(Uri uri)
         {

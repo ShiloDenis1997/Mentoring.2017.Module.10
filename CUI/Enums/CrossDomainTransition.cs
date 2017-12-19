@@ -1,4 +1,4 @@
-﻿namespace CUI
+﻿namespace CUI.Enums
 {
     public enum CrossDomainTransition
     {
