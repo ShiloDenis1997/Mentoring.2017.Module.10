@@ -1,4 +1,4 @@
-﻿namespace CUI.Interfaces
+﻿namespace SiteDownloader.Interfaces
 {
     public interface ILogger
     {

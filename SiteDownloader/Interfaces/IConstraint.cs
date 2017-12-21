@@ -1,7 +1,6 @@
 ﻿using System;
-using CUI.Enums;
 
-namespace CUI.Interfaces
+namespace SiteDownloader.Interfaces
 {
     public interface IConstraint
     {

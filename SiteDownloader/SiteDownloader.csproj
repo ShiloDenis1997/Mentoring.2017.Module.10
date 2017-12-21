@@ -43,11 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConstraintType.cs" />
+    <Compile Include="Interfaces\IConstraint.cs" />
+    <Compile Include="Interfaces\IContentSaver.cs" />
+    <Compile Include="Interfaces\ILogger.cs" />
     <Compile Include="SiteDownloader.cs" />
-    <Compile Include="Events\ItemFoundedEventArgs.cs" />
-    <Compile Include="Events\FileLoadedEventArgs.cs" />
-    <Compile Include="Events\HtmlDocumentLoadedEventArgs.cs" />
-    <Compile Include="ISiteDownloader.cs" />
+    <Compile Include="Interfaces\ISiteDownloader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

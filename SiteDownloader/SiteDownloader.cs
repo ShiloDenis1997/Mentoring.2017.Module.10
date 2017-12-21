@@ -4,53 +4,55 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using HtmlAgilityPack;
-using SiteDownloader.Events;
+using SiteDownloader.Interfaces;
 
 namespace SiteDownloader
 {
     public class Downloader : ISiteDownloader
     {
+        private readonly ILogger _logger;
+        private readonly IContentSaver _contentSaver;
+        private readonly List<IConstraint> _urlConstraints;
+        private readonly List<IConstraint> _fileConstraints;
         private const string HtmlDocumentMediaType = "text/html";
         private readonly ISet<Uri> _visitedUrls = new HashSet<Uri>();
 
-        public event EventHandler<ItemFoundedEventArgs> UrlFounded;
-        public event EventHandler<HtmlDocumentLoadedEventArgs> HtmlLoaded;
-        public event EventHandler<ItemFoundedEventArgs> FileFounded;
-        public event EventHandler<FileLoadedEventArgs> FileLoaded;
-
         public int MaxDeepLevel { get; set; }
 
-        public Downloader(int maxDeepLevel = 0)
+        public Downloader(ILogger logger, IContentSaver contentSaver, IEnumerable<IConstraint> constraints, int maxDeepLevel = 0)
         {
             if (maxDeepLevel < 0)
             {
                 throw new ArgumentException($"{nameof(maxDeepLevel)} cannot be less than zero");
             }
 
+            _logger = logger;
+            _contentSaver = contentSaver;
+            _urlConstraints = constraints.Where(c => (c.ConstraintType & ConstraintType.UrlConstraint) != 0).ToList();
+            _fileConstraints = constraints.Where(c => (c.ConstraintType & ConstraintType.FileConstraint) != 0).ToList();
+
             MaxDeepLevel = maxDeepLevel;
         }
 
-        public async Task LoadFromUrl(string url)
+        public void LoadFromUrl(string url)
         {
             _visitedUrls.Clear();
             using (var httpClient = new HttpClient())
             {
                 httpClient.BaseAddress = new Uri(url);
-                await ScanUrl(httpClient, httpClient.BaseAddress, 0);
+                ScanUrl(httpClient, httpClient.BaseAddress, 0);
             }
         }
 
-        private async Task ScanUrl(HttpClient httpClient, Uri uri, int level)
+        private void ScanUrl(HttpClient httpClient, Uri uri, int level)
         {
             if (level > MaxDeepLevel || _visitedUrls.Contains(uri) || !IsValidScheme(uri.Scheme))
             {
                 return;
             }
             _visitedUrls.Add(uri);
-            Console.WriteLine(uri);
-            HttpResponseMessage head = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri));
+            HttpResponseMessage head = httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, uri)).Result;
 
             if (!head.IsSuccessStatusCode)
             {
@@ -59,65 +61,44 @@ namespace SiteDownloader
 
             if (head.Content.Headers.ContentType?.MediaType == HtmlDocumentMediaType)
             {
-                await ProcessHtmlDocument(httpClient, uri, level);
+                ProcessHtmlDocument(httpClient, uri, level);
             }
             else
             {
-                await ProcessFile(httpClient, uri);
+                ProcessFile(httpClient, uri);
             }
         }
-
-        private bool IsValidScheme(string scheme)
+        private void ProcessFile(HttpClient httpClient, Uri uri)
         {
-            switch (scheme)
-            {
-                case "http":
-                case "https":
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private async Task ProcessFile(HttpClient httpClient, Uri uri)
-        {
-            var fileFoundedEventArgs = OnItemFounded(FileFounded, uri);
-            if (!fileFoundedEventArgs.IsAcceptable)
+            _logger.Log($"File founded: {uri}");
+            if (!IsAcceptableUri(uri, _fileConstraints))
             {
                 return;
             }
 
             var response = httpClient.GetAsync(uri).Result;
-            OnFileLoaded(new FileLoadedEventArgs
-            {
-                Uri = uri,
-                FileContent = await response.Content.ReadAsStreamAsync()
-            });
+            _logger.Log($"File loaded: {uri}");
+            _contentSaver.SaveFile(uri, response.Content.ReadAsStreamAsync().Result);
         }
 
-        private async Task ProcessHtmlDocument(HttpClient httpClient, Uri uri, int level)
+        private void ProcessHtmlDocument(HttpClient httpClient, Uri uri, int level)
         {
-            var urlFoundedEventArgs = OnItemFounded(UrlFounded, uri);
-            if (!urlFoundedEventArgs.IsAcceptable)
+            _logger.Log($"Url founded: {uri}");
+            if (!IsAcceptableUri(uri, _urlConstraints))
             {
                 return;
             }
 
-            var response = await httpClient.GetAsync(uri);
+            var response = httpClient.GetAsync(uri).Result;
             var document = new HtmlDocument();
-            document.Load(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
-            OnHtmlLoaded(new HtmlDocumentLoadedEventArgs
-            {
-                Uri = uri,
-                FileName = GetDocumentFileName(document),
-                Document = GetDocumentStream(document)
-            });
+            document.Load(response.Content.ReadAsStreamAsync().Result, Encoding.UTF8);
+            _logger.Log($"Html loaded: {uri}");
+            _contentSaver.SaveHtmlDocument(uri, GetDocumentFileName(document), GetDocumentStream(document));
 
-            var attributesWithLinks = document.DocumentNode.Descendants()
-                .SelectMany(d => d.Attributes.Where(IsAttributeWithLink));
+            var attributesWithLinks = document.DocumentNode.Descendants().SelectMany(d => d.Attributes.Where(IsAttributeWithLink));
             foreach (var attributesWithLink in attributesWithLinks)
             {
-                await ScanUrl(httpClient, new Uri(httpClient.BaseAddress, attributesWithLink.Value), level + 1);
+                ScanUrl(httpClient, new Uri(httpClient.BaseAddress, attributesWithLink.Value), level + 1);
             }
         }
 
@@ -134,30 +115,26 @@ namespace SiteDownloader
             return memoryStream;
         }
 
+        private bool IsValidScheme(string scheme)
+        {
+            switch (scheme)
+            {
+                case "http":
+                case "https":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private bool IsAttributeWithLink(HtmlAttribute attribute)
         {
             return attribute.Name == "src" || attribute.Name == "href";
         }
 
-        private ItemFoundedEventArgs OnItemFounded(EventHandler<ItemFoundedEventArgs> eventHandler, Uri uri)
+        private bool IsAcceptableUri(Uri uri, IEnumerable<IConstraint> constraints)
         {
-            ItemFoundedEventArgs eventArgs = new ItemFoundedEventArgs
-            {
-                Uri = uri,
-                IsAcceptable = true
-            };
-            eventHandler?.Invoke(this, eventArgs);
-            return eventArgs;
-        }
-
-        private void OnHtmlLoaded(HtmlDocumentLoadedEventArgs args)
-        {
-            HtmlLoaded?.Invoke(this, args);
-        }
-
-        private void OnFileLoaded(FileLoadedEventArgs args)
-        {
-            FileLoaded?.Invoke(this, args);
+            return constraints.All(c => c.IsAcceptable(uri));
         }
     }
 }

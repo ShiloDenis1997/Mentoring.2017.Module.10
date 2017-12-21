@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using CUI.Interfaces;
+using SiteDownloader.Interfaces;
 
 namespace CUI
 {
     public class SimpleLogger : ILogger
     {
-        private bool _isLogEnabled;
+        private readonly bool _isLogEnabled;
 
         public SimpleLogger(bool isLogEnabled)
         {

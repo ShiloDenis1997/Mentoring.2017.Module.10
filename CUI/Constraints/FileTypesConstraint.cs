@@ -1,8 +1,8 @@
-﻿using CUI.Interfaces;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CUI.Enums;
+using SiteDownloader;
+using SiteDownloader.Interfaces;
 
 namespace CUI.Constraints
 {

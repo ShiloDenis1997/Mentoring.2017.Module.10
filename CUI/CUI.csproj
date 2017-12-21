@@ -50,12 +50,8 @@
     <Compile Include="ContentSaver.cs" />
     <Compile Include="Enums\CrossDomainTransition.cs" />
     <Compile Include="Constraints\CrossDomainTransitionConstraint.cs" />
-    <Compile Include="Enums\ConstraintType.cs" />
-    <Compile Include="Interfaces\IConstraint.cs" />
-    <Compile Include="Interfaces\IContentSaver.cs" />
-    <Compile Include="Interfaces\ILogger.cs" />
     <Compile Include="Options.cs" />
-    <Compile Include="Mainprg.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleLogger.cs" />
   </ItemGroup>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace CUI.Interfaces
+namespace SiteDownloader.Interfaces
 {
     public interface IContentSaver
     {

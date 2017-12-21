@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CUI.Enums
+namespace SiteDownloader
 {
     [Flags]
     public enum ConstraintType

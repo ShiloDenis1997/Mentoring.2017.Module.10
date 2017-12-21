@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using CUI.Interfaces;
+using SiteDownloader.Interfaces;
 
 namespace CUI
 {
